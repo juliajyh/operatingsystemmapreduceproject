@@ -170,10 +170,11 @@ void *reduce_wrapper()
   return NULL;
 }
 
-char *get_filename()
+void *map_wrapper()
 {
   pthread_mutex_lock(&fileLock);
   char *file;
+  do  {
   if (count_files >= total_files)
   {
     pthread_mutex_unlock(&fileLock);
@@ -181,20 +182,24 @@ char *get_filename()
   } else {
     file = fileNames[count_files++];
   }
-  pthread_mutex_unlock(&fileLock);
-  return file;
+    pthread_mutex_unlock(&fileLock);
+    mapper(file);
+  } while (file != NULL)
+  
+  return NULL;
 }
 
+/*
 void *map_wrapper()
 {
     char *file;
-    while ((file = get_filename()) != NULL)
+    while ((file = extract_file()) != NULL)
         {
             mapper(file);
         }
         return NULL;
 }
-
+*/
 
 void create(struct ArrayList *list)
 {
