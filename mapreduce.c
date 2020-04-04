@@ -142,13 +142,16 @@ void *reduce_wrapper()
   int curPartition;
   for (;;)
   {
+    pthread_mutex_lock(&fileLock);
     if (count_partitions >= all_partition)
     {
+      pthread_mutex_unlock(&fileLock);
       return NULL;
     }
     struct partition *thisPartition = partitions[count_partitions];
     curPartition = count_partitions;
     count_partitions++;
+    pthread_mutex_unlock(&fileLock);
     sort_partitions(curPartition);
     struct ArrayList *list = &(thisPartition->list);
     if (list->occupied <= 0)
