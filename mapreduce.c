@@ -14,7 +14,7 @@ struct Entry
   char *value;
 };
 
-struct Entry *immediate;
+struct Entry* immediate;
 struct ArrayList
 {
   struct Entry *etrs;
@@ -58,31 +58,32 @@ Partitioner partitioner;
 Mapper mapper;
 Reducer reducer;
 
+
 /* use pthread_self */
 void MR_EmitToCombiner(char *key, char *value)
 {
-  int partition_num = partitioner(key, all_partition);
-  struct partition *thisPartition = partitions[partition_num];
-  char *bufferKey = malloc(strlen(key) + 1);
-  strcpy(bufferKey, key);
-  char *bufferValue = malloc(strlen(value) + 1);
-  strcpy(bufferValue, value);
-  add(&(thisPartition->list), bufferKey, bufferValue);
+    int partition_num = partitioner(key, all_partition);
+    struct partition *thisPartition = partitions[partition_num];
+    char *bufferKey = malloc(strlen(key) + 1);
+    strcpy(bufferKey, key);
+    char *bufferValue = malloc(strlen(value) + 1);
+    strcpy(bufferValue, value);
+	add(&(thisPartition->list), bufferKey, bufferValue);
 
-  return;
+    return;
 }
 
 void MR_EmitToReducer(char *key, char *value)
 {
-  int partition_num = partitioner(key, all_partition);
-  struct partition *thisPartition = partitions[partition_num];
-  char *bufferKey = malloc(strlen(key) + 1);
-  strcpy(bufferKey, key);
-  char *bufferValue = malloc(strlen(value) + 1);
-  strcpy(bufferValue, value);
-  add(&(thisPartition->list), bufferKey, bufferValue);
+    int partition_num = partitioner(key, all_partition);
+    struct partition *thisPartition = partitions[partition_num];
+    char *bufferKey = malloc(strlen(key) + 1);
+    strcpy(bufferKey, key);
+    char *bufferValue = malloc(strlen(value) + 1);
+    strcpy(bufferValue, value);
+    add(&(thisPartition->list), bufferKey, bufferValue);
 
-  return;
+	return;
 }
 
 char *get_next(char *key, int partition_number)
@@ -100,6 +101,7 @@ char *get_next(char *key, int partition_number)
   }
   return NULL;
 }
+
 
 unsigned long MR_DefaultHashPartition(char *key, int num_partitions)
 {
@@ -164,33 +166,25 @@ void *reduce_wrapper()
       element = &(list->etrs[list->pos]);
     }
   }
-
+  
   return NULL;
 }
 
-void *map_wrapper()
+char *extract_file()
 {
   pthread_mutex_lock(&fileLock);
-  char *file = malloc(100);
-  while (file != NULL)
+  char *file;
+  if (count_files >= total_files)
   {
-    if (count_files >= total_files)
-    {
-      pthread_mutex_unlock(&fileLock);
-      file = NULL;
-    }
-    else
-    {
-      file = fileNames[count_files++];
-    }
     pthread_mutex_unlock(&fileLock);
-    mapper(file);
+    file =  NULL;
+  } else {
+    file = fileNames[count_files++];
   }
-
-  return NULL;
+  pthread_mutex_unlock(&fileLock);
+  return file;
 }
 
-/*
 void *map_wrapper()
 {
     char *file;
@@ -200,7 +194,7 @@ void *map_wrapper()
         }
         return NULL;
 }
-*/
+
 
 void create(struct ArrayList *list)
 {
@@ -220,51 +214,51 @@ void free_all(struct ArrayList *list)
   free(list->etrs);
 }
 
-void MR_Run(int argc, char *argv[], Mapper map, int num_mappers,
-            Reducer reduce, int num_reducers, Combiner combine, Partitioner partition)
+void MR_Run (int argc, char *argv[], Mapper map, int num_mappers, 
+    Reducer reduce, int num_reducers, Combiner combine, Partitioner partition)
 {
-  pthread_t mappers[num_mappers];
-  pthread_t reducers[num_reducers];
-  count_files = 0;
-  total_files = argc - 1;
-  fileNames = &argv[1];
-  count_partitions = 0;
-  all_partition = num_reducers;
-  partitions = calloc(num_reducers, sizeof(struct partition *));
-  int i;
-  for (i = 0; i < num_reducers; i++)
-  {
-    partitions[i] = malloc(sizeof(struct partition));
-    create(&(partitions[i]->list));
-  }
-  partitioner = partition;
-  reducer = reduce;
-  //map
-  mapper = map;
-  for (i = 0; i < num_mappers; i++)
-  {
-    pthread_create(&mappers[i], NULL, map_wrapper, NULL);
-  }
-  for (i = 0; i < num_mappers; i++)
-  {
-    pthread_join(mappers[i], NULL);
-  }
-  //reduce(with sort)
-  for (i = 0; i < num_reducers; i++)
-  {
-    pthread_create(&reducers[i], NULL, reduce_wrapper, NULL);
-  }
-  for (i = 0; i < num_reducers; i++)
-  {
-    pthread_join(reducers[i], NULL);
-  }
-  for (i = 0; i < num_reducers; i++)
-  {
-    free_all(&partitions[i]->list);
-  }
-  for (i = 0; i < num_reducers; i++)
-  {
-    free(partitions[i]);
-  }
-  free(partitions);
+    pthread_t mappers[num_mappers];
+    pthread_t reducers[num_reducers];
+    count_files = 0;
+    total_files = argc - 1;
+    fileNames = &argv[1];
+    count_partitions = 0;
+    all_partition = num_reducers;
+    partitions = calloc(num_reducers, sizeof(struct partition *));
+    int i;
+    for (i = 0; i < num_reducers; i++)
+    {
+        partitions[i] = malloc(sizeof(struct partition));
+        create(&(partitions[i]->list));
+    }
+    partitioner = partition;
+    reducer = reduce;
+    //map
+    mapper = map;
+    for (i = 0; i < num_mappers; i++)
+    {
+        pthread_create(&mappers[i], NULL, map_wrapper, NULL);
+    }
+    for (i = 0; i < num_mappers; i++)
+    {
+        pthread_join(mappers[i], NULL);
+    }
+    //reduce(with sort)
+    for (i = 0; i < num_reducers; i++)
+    {
+        pthread_create(&reducers[i], NULL, reduce_wrapper, NULL);
+    }
+    for (i = 0; i < num_reducers; i++)
+    {
+        pthread_join(reducers[i], NULL);
+    }
+    for (i = 0; i < num_reducers; i++)
+    {
+        free_all(&partitions[i]->list);
+    }
+    for (i = 0; i < num_reducers; i++)
+    {
+        free(partitions[i]);
+    }
+    free(partitions);
 }
