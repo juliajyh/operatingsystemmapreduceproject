@@ -171,12 +171,12 @@ char *get_filename()
 {
   pthread_mutex_lock(&fileLock);
   char *file;
-  if (file_progress >= num_files)
+  if (count_files >= total_files)
   {
     pthread_mutex_unlock(&fileLock);
     file =  NULL;
   } else {
-    file = fileNames[file_progress++];
+    file = fileNames[count_files++];
   }
   pthread_mutex_unlock(&fileLock);
   return file;
@@ -198,12 +198,11 @@ void create(struct ArrayList *list)
   pthread_mutex_init(&list->array_lock, NULL);
   list->capacity = 1073;
   list->occupied = 0;
-  list->etr = malloc(list->capacity * sizeof(struct Entry));
+  list->etrs = malloc(list->capacity * sizeof(struct Entry));
 }
 
 void free_all(struct ArrayList *list)
 {
-  int i;
   for (int i = 0; i < list->occupied; i++)
   {
     free(list->etrs[i].key);
