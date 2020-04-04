@@ -58,19 +58,6 @@ Partitioner partitioner;
 Mapper mapper;
 Reducer reducer;
 
-void MR_EmitReducerState(char* key, char *state, int partition_number)
-{
-    struct partition *thisPartition = partitions[partition_number];
-    char *bufferKey = malloc(strlen(key) + 1);
-    // strcpy(bufferKey, key);
-    char *bufferValue = malloc(strlen(value) + 1);
-    // strcpy(bufferValue, value);	
-    sem_wait(&fullBuffer);
-    add(&(thisPartition->list), key, value);
-	//use(immediate, bufferKey, bufferValue);
-	sem_post(&emptyBuffer);
-	return;
-}
 
 /* use pthread_self */
 void MR_EmitToCombiner(char *key, char *value)
@@ -91,15 +78,11 @@ void MR_EmitToReducer(char *key, char *value)
     int partition_num = partitioner(key, all_partition);
     struct partition *thisPartition = partitions[partition_num];
     char *bufferKey = malloc(strlen(key) + 1);
-    // strcpy(bufferKey, key);
+    strcpy(bufferKey, key);
     char *bufferValue = malloc(strlen(value) + 1);
-    // strcpy(bufferValue, value);
-    // add(&(thisPartition->list), bufferKey, bufferValue);
-    sem_wait(&emptyBuffer);
-	immediate = malloc(sizeof(struct Entry));
-	strcpy(immediate->key, key);
-	strcpy(immediate->value, value);
-	sem_post(&fullBuffer);
+    strcpy(bufferValue, value);
+    add(&(thisPartition->list), bufferKey, bufferValue);
+
 	return;
 }
 
@@ -163,18 +146,13 @@ void *reduce_wrapper()
   int curPartition;
   for (;;)
   {
-    //sem_wait(&fullBuffer);
-   //  sem_wait(&mutex);
-    // pthread_mutex_lock(&fileLock);
     if (count_partitions >= all_partition)
     {
-    //   pthread_mutex_unlock(&fileLock);
       return NULL;
     }
     struct partition *thisPartition = partitions[count_partitions];
     curPartition = count_partitions;
     count_partitions++;
-    // pthread_mutex_unlock(&fileLock);
     sort_partitions(curPartition);
     struct ArrayList *list = &(thisPartition->list);
     if (list->occupied <= 0)
@@ -188,8 +166,6 @@ void *reduce_wrapper()
         break;
       element = &(list->etrs[list->pos]);
     }
-    // sem_wait(&mutex);
-    // sem_post(&emptyBuffer);
   }
   
   return NULL;
