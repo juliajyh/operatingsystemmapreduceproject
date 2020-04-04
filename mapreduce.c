@@ -102,10 +102,6 @@ char *get_next(char *key, int partition_number)
   return NULL;
 }
 
-// char *get_state(char* key, )
-// {
-
-// }
 
 unsigned long MR_DefaultHashPartition(char *key, int num_partitions)
 {
@@ -171,17 +167,27 @@ void *reduce_wrapper()
   return NULL;
 }
 
+char *get_filename()
+{
+  pthread_mutex_lock(&fileLock);
+  char *file;
+  if (file_progress >= num_files)
+  {
+    pthread_mutex_unlock(&fileLock);
+    file =  NULL;
+  } else {
+    file = fileNames[file_progress++];
+  }
+  pthread_mutex_unlock(&fileLock);
+  return file;
+}
+
 void *map_wrapper()
 {
     char *file;
-    file = fileNames[count_files++];
-    while (file != NULL)
+    while ((file = get_filename()) != NULL)
         {
             mapper(file);
-        if (count_files >= total_files)
-            file =  NULL;
-        else 
-            file = fileNames[count_files++];
         }
         return NULL;
 }
@@ -211,9 +217,9 @@ void MR_Run (int argc, char *argv[], Mapper map, int num_mappers,
 {
     pthread_t mappers[num_mappers];
     pthread_t reducers[num_reducers];
-    count_files = 1;
+    count_files = 0;
     total_files = argc - 1;
-    fileNames = argv;
+    fileNames = &argv[1];
     count_partitions = 0;
     all_partition = num_reducers;
     partitions = calloc(num_reducers, sizeof(struct partition *));
