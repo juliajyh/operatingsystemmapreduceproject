@@ -58,7 +58,6 @@ Partitioner partitioner;
 Mapper mapper;
 Reducer reducer;
 
-/* use pthread_self */
 void MR_EmitToCombiner(char *key, char *value)
 {
   int partition_num = partitioner(key, all_partition);
@@ -94,10 +93,10 @@ char *get_next(char *key, int partition_number)
   {
     return NULL;
   }
-  if (strcmp(key, curr_etr[pos].key) == 0)
-  {
+  if (strcmp(key, curr_etr[pos].key) != 0)
+    return NULL;
+  else
     return curr_etr[(list->pos)++].value;
-  }
   return NULL;
 }
 
@@ -175,14 +174,14 @@ char *extract_file()
 {
   pthread_mutex_lock(&fileLock);
   char *file;
-  if (count_files >= total_files)
+  if (count_files < total_files)
   {
-    pthread_mutex_unlock(&fileLock);
-    file = NULL;
+      file = fileNames[count_files++];
   }
   else
   {
-    file = fileNames[count_files++];
+    pthread_mutex_unlock(&fileLock);
+    file = NULL;
   }
   pthread_mutex_unlock(&fileLock);
   return file;
